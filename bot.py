@@ -101,6 +101,7 @@ async def leave(interaction: discord.Interaction):
     if voice_client is None:
         return
 
+
     await voice_client.disconnect()
     await interaction.response.send_message("Left the voice channel.")
 
