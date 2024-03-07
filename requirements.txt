@@ -1,0 +1,4 @@
+discord
+aiohttp
+requests
+pynacl

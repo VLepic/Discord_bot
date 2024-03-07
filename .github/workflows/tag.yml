@@ -1,0 +1,25 @@
+name: Tag Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  tag_release:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Read version from file
+        id: version
+        run: echo "::set-output name=version::$(cat version.txt)"
+
+      - name: Create tag
+        run: git tag ${{ steps.version.outputs.version }}
+
+      - name: Push tag
+        run: git push origin ${{ steps.version.outputs.version }}
