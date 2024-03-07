@@ -98,6 +98,7 @@ async def join(interaction: discord.Interaction):
 async def leave(interaction: discord.Interaction):
     voice_client = interaction.guild.voice_client
 
+
     if voice_client is None:
         return
 
