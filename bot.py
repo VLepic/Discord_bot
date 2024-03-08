@@ -16,9 +16,16 @@ class MyClient(discord.Client):
         print('Logged in as', self.user)
 
 
+jailed = []
 client = MyClient(intents = discord.Intents.default())
 tree = app_commands.CommandTree(client)
 server = discord.Object(id=int(os.environ.get('GUILD_ID', '735570517657911318')))
+
+@client.event
+async def on_voice_state_update(member, before, after):
+    if after.channel is not None:
+        if member in jailed and after.channel.id != int(os.environ.get('ABUSE_CHANNEL2', '1100472522270593124')):
+            await member.move_to(client.get_channel(int(os.environ.get('ABUSE_CHANNEL2', '1100472522270593124'))))
 
 
 
@@ -45,7 +52,7 @@ async def ans(interaction: discord.Interaction, message: discord.Message):
 async def wakeup(interaction: discord.Interaction, member: discord.Member):
 
     targetchannel1 = client.get_channel(int(os.environ.get('ABUSE_CHANNEL1', '1100472301281091626')))
-    targetchannel2 = client.get_channel(int(os.environ.get('ABUSE_CHANNEL1', '1100472522270593124')))
+    targetchannel2 = client.get_channel(int(os.environ.get('ABUSE_CHANNEL2', '1100472522270593124')))
     originchannel = member.voice.channel
 
     await interaction.response.defer(ephemeral=True)
@@ -63,13 +70,46 @@ async def wakeup(interaction: discord.Interaction, member: discord.Member):
     await member.move_to(originchannel)
     await interaction.followup.send(f"Woke up {member.display_name}!", ephemeral=True)
 
+@tree.context_menu(name="Send to gulag", guild=server)
+async def arrest(interaction: discord.Interaction, member: discord.Member):
+    channel = discord.utils.get(member.guild.text_channels, name='bot-commands')
+    if interaction.user.guild_permissions.move_members:
+        gulag = client.get_channel(int(os.environ.get('ABUSE_CHANNEL2', '1100472522270593124')))
+        if member.voice:
+            await member.move_to(gulag)
+            jailed.append(member)
+            if channel:
+                await channel.send(f'{member.mention} has been sent to gulag. ')
+                return
+        else:
+            await channel.send(f'{member.mention} is not present. Will be sent to gulag once in reach.')
+            jailed.append(member)
+            return
+    else:
+        await channel.send(f'{interaction.user.mention} has no permission to send people to gulag.')
+
+
+@tree.context_menu(name="Release from gulag", guild=server)
+async def release(interaction: discord.Interaction, member: discord.Member):
+    channel = discord.utils.get(member.guild.text_channels, name='bot-commands')
+    if interaction.user.guild_permissions.move_members:
+        if member in jailed:
+            jailed.remove(member)
+            if channel:
+                await channel.send(f'{member.mention} has been released from gulag. ')
+        else:
+            await channel.send("This user is not arrested.")
+    else:
+        await channel.send(f'{interaction.user.mention} has no permission to release people from gulag.')
+
+
 @tree.command(name="respond", description="Process a message", guild=server)
 async def respond(interaction: discord.Interaction, input_text: str):
     await interaction.response.defer()
     await ans_with_string_input(interaction, input_text)
 
 async def ans_with_string_input(interaction: discord.Interaction, input_text: str):
-    url = os.environ.get('OLLAMA_URL', '')
+    url = os.environ.get('OLLAMA_URL')
     data = {
         "model": os.environ.get('OLLAMA_MODEL', 'wizard-vicuna-uncensored:30b'),
         "prompt": input_text,
@@ -97,10 +137,9 @@ async def join(interaction: discord.Interaction):
 @tree.command(name='leave', description='Leave the voice channel.', guild=server)
 async def leave(interaction: discord.Interaction):
     voice_client = interaction.guild.voice_client
-
-
     if voice_client is None:
         return
+
 
 
     await voice_client.disconnect()
